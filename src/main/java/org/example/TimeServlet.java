@@ -2,6 +2,7 @@ package org.example;
 
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -34,15 +35,27 @@ public class TimeServlet extends HttpServlet {
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws IOException {
         resp.setContentType("text/html; charset=utf-8");
 
-        String time;
+        String time = "";
         if (req.getParameterMap().containsKey("timezone")) {
             String zone = req.getParameter("timezone");
             time = ZonedDateTime.now(ZoneId.of(zone))
                     .format(DateTimeFormatter.ofPattern(
                             "'Date:' yyy-MM-dd, 'Time:' HH:mm:ss")) + ", UTC: " + ZonedDateTime.now(ZoneId.of(zone)).getOffset();
+            resp.addCookie(new Cookie("lastTimezone", ZonedDateTime.now(ZoneId.of(zone)).getOffset().toString()));
         } else {
-            time = ZonedDateTime.now(ZoneId.of("+0")).format(DateTimeFormatter.ofPattern(
-                    "'Date:' yyy-MM-dd, 'Time:' HH:mm:ss")) + ", UTC: +0:00";
+            try {
+                Cookie[] cookies = req.getCookies();
+                for (Cookie cookie : cookies) {
+                    if(cookie.getName().equals("lastTimezone")) {
+                        time = ZonedDateTime.now(ZoneId.of(cookie.getValue()))
+                                .format(DateTimeFormatter.ofPattern(
+                                        "'Date:' yyy-MM-dd, 'Time:' HH:mm:ss")) + ", UTC: " + ZonedDateTime.now(ZoneId.of(cookie.getValue())).getOffset();
+                    }
+                }
+            } catch (NullPointerException npe) {
+                time = ZonedDateTime.now(ZoneId.of("+0")).format(DateTimeFormatter.ofPattern(
+                        "'Date:' yyy-MM-dd, 'Time:' HH:mm:ss")) + ", UTC: +0:00";
+            }
         }
 
         Context simpleContext = new Context(
